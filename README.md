@@ -1,6 +1,8 @@
 # Sendspin GUI
 
 A GUI wrapper for testing and iterating on the [aiosendspin](https://github.com/Sendspin/aiosendspin) server without needing to integrate with Music Assistant.
+<img width="1202" height="832" alt="image" src="https://github.com/user-attachments/assets/b4713273-0d0a-4561-9309-d47a666fa535" />
+
 
 ## Features
 
