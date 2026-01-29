@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "sendspin-gui"
+name = "sendspin-dev-server"
 version = "0.1.0"
 description = "A GUI wrapper for testing and iterating on the aiosendspin server"
 readme = "README.md"
@@ -39,9 +39,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Sendspin/sendspin-gui"
-Repository = "https://github.com/Sendspin/sendspin-gui"
-Issues = "https://github.com/Sendspin/sendspin-gui/issues"
+Homepage = "https://github.com/chrisuthe/Sendspin-dev-server"
+Repository = "https://github.com/chrisuthe/Sendspin-dev-server"
+Issues = "https://github.com/chrisuthe/Sendspin-dev-server/issues"
 
 [project.scripts]
 sendspin-gui = "sendspin_gui.__main__:main"
