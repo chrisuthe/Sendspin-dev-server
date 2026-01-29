@@ -7,9 +7,11 @@ import concurrent.futures
 import logging
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import customtkinter as ctk
+from aiosendspin.models.types import ArtworkSource
 from aiosendspin.server import (
     ClientAddedEvent,
     ClientEvent,
@@ -26,6 +28,7 @@ from aiosendspin.server import (
 )
 from aiosendspin.server.metadata import Metadata, RepeatMode
 from aiosendspin.server.stream import AudioCodec, AudioFormat, MediaStream
+from PIL import Image, ImageDraw, ImageFont
 
 from .components.clients_panel import ClientsPanel
 from .components.event_log import EventLog
@@ -81,6 +84,10 @@ class SendspinGUIApp(ctk.CTk):
         # Logging handler for aiosendspin
         self._log_handler: GUILogHandler | None = None
         self._aiosendspin_logger = logging.getLogger("aiosendspin")
+
+        # Default album artwork
+        self._default_artwork: Image.Image | None = None
+        self._load_default_artwork()
 
         # Build UI
         self._build_ui()
@@ -155,6 +162,74 @@ class SendspinGUIApp(ctk.CTk):
             anchor="w",
         )
         self.status_label.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
+
+    def _load_default_artwork(self) -> None:
+        """Load or generate the default album artwork image."""
+        try:
+            # Try to load from assets folder first
+            assets_path = Path(__file__).parent / "assets" / "default_album_art.png"
+            if assets_path.exists():
+                self._default_artwork = Image.open(assets_path)
+            else:
+                # Generate a simple default image
+                self._default_artwork = self._generate_default_artwork()
+        except Exception:
+            self._default_artwork = None
+
+    def _generate_default_artwork(self) -> Image.Image:
+        """Generate a simple default album art image with gradient and text."""
+        size = 512
+        img = Image.new("RGB", (size, size), color=(40, 40, 50))
+        draw = ImageDraw.Draw(img)
+
+        # Draw a gradient-like effect with rectangles
+        for i in range(0, size, 4):
+            # Create a subtle gradient from dark blue-gray to lighter
+            shade = int(40 + (i / size) * 30)
+            color = (shade, shade, shade + 15)
+            draw.rectangle([0, i, size, i + 4], fill=color)
+
+        # Draw a centered circle/disc icon
+        center = size // 2
+        disc_radius = 120
+        inner_radius = 40
+
+        # Outer disc
+        draw.ellipse(
+            [center - disc_radius, center - disc_radius,
+             center + disc_radius, center + disc_radius],
+            fill=(80, 80, 100),
+            outline=(100, 100, 130),
+            width=3,
+        )
+
+        # Inner disc hole
+        draw.ellipse(
+            [center - inner_radius, center - inner_radius,
+             center + inner_radius, center + inner_radius],
+            fill=(40, 40, 50),
+            outline=(60, 60, 80),
+            width=2,
+        )
+
+        # Draw text
+        try:
+            # Try to use a built-in font with size
+            font = ImageFont.truetype("arial.ttf", 32)
+        except OSError:
+            # Fall back to default font
+            font = ImageFont.load_default()
+
+        text = "Sendspin GUI"
+        # Get text bounding box for centering
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_x = (size - text_width) // 2
+        text_y = size - 80
+
+        draw.text((text_x, text_y), text, fill=(180, 180, 200), font=font)
+
+        return img
 
     def _log_event(self, message: str, level: str = "info") -> None:
         """Log an event to the event log panel."""
@@ -501,6 +576,15 @@ class SendspinGUIApp(ctk.CTk):
         )
         group.set_metadata(metadata)
 
+    async def _set_artwork(self, group: SendspinGroup) -> None:
+        """Send default album artwork to the group.
+
+        Args:
+            group: Target group to send artwork to
+        """
+        if self._default_artwork is not None:
+            await group.set_media_art(self._default_artwork, source=ArtworkSource.ALBUM)
+
     def _start_progress_updates(self) -> None:
         """Start the background task that updates metadata progress."""
         if self._active_group is None:
@@ -549,6 +633,13 @@ class SendspinGUIApp(ctk.CTk):
         self._stop_progress_updates()
         if self._active_group:
             self._active_group.set_metadata(None)  # Clear metadata on clients
+            # Clear artwork asynchronously
+            group = self._active_group
+
+            async def _clear_art() -> None:
+                await group.set_media_art(None)
+
+            self._async_bridge.run_coroutine(_clear_art(), lambda r, e: None)
         self._active_group = None
         self._stream_start_time = None
         self._stream_duration_ms = 0
@@ -617,6 +708,9 @@ class SendspinGUIApp(ctk.CTk):
         )
 
         async def _stream() -> None:
+            # Send artwork first
+            await self._set_artwork(target_group)
+
             # Wrap the audio source with pause support
             source = decode_audio_streaming(
                 file_path,
@@ -713,6 +807,9 @@ class SendspinGUIApp(ctk.CTk):
         )
 
         async def _stream() -> None:
+            # Send artwork first
+            await self._set_artwork(target_group)
+
             # Wrap the audio source with pause support
             source = generate_sine_wave(
                 frequency=frequency,
@@ -811,6 +908,9 @@ class SendspinGUIApp(ctk.CTk):
         )
 
         async def _stream() -> None:
+            # Send artwork first
+            await self._set_artwork(target_group)
+
             # Wrap the audio source with pause support
             source = decode_audio_streaming(
                 url,

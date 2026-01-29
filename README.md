@@ -16,20 +16,29 @@ A GUI wrapper for testing and iterating on the [aiosendspin](https://github.com/
 
 ### Prerequisites
 
-- Python 3.11 or higher
-- pip
+- Python 3.12 or higher
 
-### Install from source
+### Install with uv (recommended)
+
+[uv](https://docs.astral.sh/uv/) is a fast Python package installer.
 
 ```bash
-cd "Z:\Code Projects\sendspin-gui"
-pip install -e .
+# Install uv if you don't have it
+pip install uv
+
+# Install sendspin-gui
+cd sendspin-gui
+uv pip install -e .
+
+# Or with dev dependencies
+uv pip install -e ".[dev]"
 ```
 
-### Install dependencies only
+### Install with pip
 
 ```bash
-pip install aiosendspin customtkinter pillow
+cd sendspin-gui
+pip install -e .
 ```
 
 ## Usage
@@ -110,7 +119,8 @@ sendspin-gui/
 
 ```bash
 # Install in editable mode with dev dependencies
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
+# or: pip install -e ".[dev]"
 
 # Run the app
 python -m sendspin_gui
